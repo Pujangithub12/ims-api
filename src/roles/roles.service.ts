@@ -10,12 +10,7 @@ export class RolesService {
 
   async create(createRoleDto: CreateRoleDto) {
     createRoleDto.name=capitalizeFirstLetterOfEachWordInAPhrase(createRoleDto.name)
-    const role= await this.prismaService.role.findFirst({
-      where:{
-        name: createRoleDto.name,
-      },
-    });
-    if(role){
+    if(await this.checkIfRoleExist(createRoleDto.name)){
       throw new BadRequestException(`Role ${createRoleDto.name}has already been taken`);
     }
     return this.prismaService.role.create({data: createRoleDto});
@@ -34,12 +29,7 @@ export class RolesService {
     await this.getRoleById(id);
 
     updateRoleDto.name=capitalizeFirstLetterOfEachWordInAPhrase(updateRoleDto.name)
-    const role= await this.prismaService.role.findFirst({
-      where:{
-        name: updateRoleDto.name,
-      },
-    });
-    if(role && role.id !== id){
+    if(!await this.checkIfRoleExist(updateRoleDto.name, id)){
       throw new BadRequestException(`Role ${updateRoleDto.name} has already been taken`);
     }
     return this.prismaService.role.update({
@@ -58,5 +48,14 @@ export class RolesService {
       throw new NotFoundException(`Role with id ${id} does not exist`)
     }
     return role;
+  }
+  private async checkIfRoleExist(name: string, id?: number):Promise<boolean>{
+    const role= await this.prismaService.role.findFirst({
+      where: {name,}
+    });
+    if (id) {
+      return role ? role.id === id: true;
+    }
+    return !!role;
   }
 }
